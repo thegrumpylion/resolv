@@ -24,17 +24,13 @@ func (cell *Cell) register(obj *Object) {
 
 // unregister unregisters an object from a Cell. Should not be used directly.
 func (cell *Cell) unregister(obj *Object) {
-
 	for i, o := range cell.Objects {
-
 		if o == obj {
 			cell.Objects[i] = cell.Objects[len(cell.Objects)-1]
 			cell.Objects = cell.Objects[:len(cell.Objects)-1]
 			break
 		}
-
 	}
-
 }
 
 // Contains returns whether a Cell contains the specified Object at its position.
@@ -48,9 +44,9 @@ func (cell *Cell) Contains(obj *Object) bool {
 }
 
 // ContainsTags returns whether a Cell contains an Object that has the specified tag at its position.
-func (cell *Cell) ContainsTags(tags ...string) bool {
+func (cell *Cell) ContainsTags(tags Tag) bool {
 	for _, o := range cell.Objects {
-		if o.HasTags(tags...) {
+		if o.HasTags(tags) {
 			return true
 		}
 	}

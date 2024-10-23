@@ -16,14 +16,13 @@ func newCollision() *Collision {
 }
 
 // HasTags returns whether any objects within the Collision have all of the specified tags. This slice does not contain the Object that called Check().
-func (cc *Collision) HasTags(tags ...string) bool {
-
+func (cc *Collision) HasTags(tags Tag) bool {
 	for _, o := range cc.Objects {
 
 		if o == cc.checkingObject {
 			continue
 		}
-		if o.HasTags(tags...) {
+		if o.HasTags(tags) {
 			return true
 		}
 
@@ -34,8 +33,7 @@ func (cc *Collision) HasTags(tags ...string) bool {
 
 // ObjectsByTags returns a slice of Objects from the cells reported by a Collision object by searching for Objects with a specific set of tags.
 // This slice does not contain the Object that called Check().
-func (cc *Collision) ObjectsByTags(tags ...string) []*Object {
-
+func (cc *Collision) ObjectsByTags(tags Tag) []*Object {
 	objects := []*Object{}
 
 	for _, o := range cc.Objects {
@@ -43,19 +41,17 @@ func (cc *Collision) ObjectsByTags(tags ...string) []*Object {
 		if o == cc.checkingObject {
 			continue
 		}
-		if o.HasTags(tags...) {
+		if o.HasTags(tags) {
 			objects = append(objects, o)
 		}
 
 	}
 
 	return objects
-
 }
 
 // ContactWithObject returns the delta to move to have the checking object come into contact with the specified Object.
 func (cc *Collision) ContactWithObject(object *Object) Vector {
-
 	delta := Vector{0, 0}
 
 	if cc.dx < 0 {
@@ -71,12 +67,10 @@ func (cc *Collision) ContactWithObject(object *Object) Vector {
 	}
 
 	return delta
-
 }
 
 // ContactWithCell returns the delta to move to have the checking object come into contact with the specified Cell.
 func (cc *Collision) ContactWithCell(cell *Cell) Vector {
-
 	delta := Vector{0, 0}
 
 	cx := float64(cell.X * cc.checkingObject.Space.CellWidth)
@@ -95,7 +89,6 @@ func (cc *Collision) ContactWithCell(cell *Cell) Vector {
 	}
 
 	return delta
-
 }
 
 // SlideAgainstCell returns how much distance the calling Object can slide to avoid a collision with the targetObject, and
@@ -103,8 +96,7 @@ func (cc *Collision) ContactWithCell(cell *Cell) Vector {
 // This only works on vertical and horizontal axes (x and y directly), primarily for platformers / top-down games.
 // avoidTags is a sequence of tags (as strings) to indicate when sliding is valid (i.e. if a Cell contains an
 // Object that has the tag given in the avoidTags slice, then sliding CANNOT happen).
-func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) (Vector, bool) {
-
+func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags Tag) (Vector, bool) {
 	sp := cc.checkingObject.Space
 
 	collidingCell := cc.Cells[0]
@@ -129,11 +121,10 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) (Vector, 
 
 	// Moving vertically
 	if cc.dy != 0 {
-
-		if diffX > 0 && (right == nil || !right.ContainsTags(avoidTags...)) {
+		if diffX > 0 && (right == nil || !right.ContainsTags(avoidTags)) {
 			// Slide right
 			slide.X = ccX + hX - cc.checkingObject.Position.X
-		} else if diffX < 0 && (left == nil || !left.ContainsTags(avoidTags...)) {
+		} else if diffX < 0 && (left == nil || !left.ContainsTags(avoidTags)) {
 			// Slide left
 			slide.X = ccX - hX - (cc.checkingObject.Position.X + cc.checkingObject.Size.X)
 		} else {
@@ -142,10 +133,10 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) (Vector, 
 	}
 
 	if cc.dx != 0 {
-		if diffY > 0 && (down == nil || !down.ContainsTags(avoidTags...)) {
+		if diffY > 0 && (down == nil || !down.ContainsTags(avoidTags)) {
 			// Slide down
 			slide.Y = ccY + hY - cc.checkingObject.Position.Y
-		} else if diffY < 0 && (up == nil || !up.ContainsTags(avoidTags...)) {
+		} else if diffY < 0 && (up == nil || !up.ContainsTags(avoidTags)) {
 			// Slide up
 			slide.Y = ccY - hY - (cc.checkingObject.Position.Y + cc.checkingObject.Size.Y)
 		} else {
@@ -154,5 +145,4 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) (Vector, 
 	}
 
 	return slide, true
-
 }

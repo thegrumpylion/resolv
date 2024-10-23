@@ -23,7 +23,6 @@ func NewWorldLineTest(game *Game) *WorldLineTest {
 }
 
 func (world *WorldLineTest) Init() {
-
 	gw := float64(world.Game.Width)
 	gh := float64(world.Game.Height)
 
@@ -33,7 +32,6 @@ func (world *WorldLineTest) Init() {
 
 	// Construct geometry
 	geometry := []*resolv.Object{
-
 		resolv.NewObject(0, 0, 16, gh),
 		resolv.NewObject(gw-16, 0, 16, gh),
 		resolv.NewObject(0, 0, gw, 16),
@@ -46,17 +44,15 @@ func (world *WorldLineTest) Init() {
 	world.Space.Add(geometry...)
 
 	for _, o := range world.Space.Objects() {
-		o.AddTags("solid")
+		o.AddTags(SolidTag)
 	}
 
 	world.Player = resolv.NewObject(160, 160, 16, 16)
-	world.Player.AddTags("player")
+	world.Player.AddTags(PlayerTag)
 	world.Space.Add(world.Player)
-
 }
 
 func (world *WorldLineTest) Update() {
-
 	dx, dy := 0.0, 0.0
 	moveSpd := 2.0
 
@@ -76,27 +72,25 @@ func (world *WorldLineTest) Update() {
 		dx += moveSpd
 	}
 
-	if col := world.Player.Check(dx, 0, "solid"); col != nil {
+	if col := world.Player.CheckWithTags(dx, 0, SolidTag); col != nil {
 		dx = col.ContactWithObject(col.Objects[0]).X
 	}
 
 	world.Player.Position.X += dx
 
-	if col := world.Player.Check(0, dy, "solid"); col != nil {
+	if col := world.Player.CheckWithTags(0, dy, SolidTag); col != nil {
 		dy = col.ContactWithObject(col.Objects[0]).Y
 	}
 
 	world.Player.Position.Y += dy
 
 	world.Player.Update()
-
 }
 
 func (world *WorldLineTest) Draw(screen *ebiten.Image) {
-
 	for _, o := range world.Space.Objects() {
 		drawColor := color.RGBA{60, 60, 60, 255}
-		if o.HasTags("player") {
+		if o.HasTags(PlayerTag) {
 			drawColor = color.RGBA{0, 255, 0, 255}
 		}
 		ebitenutil.DrawRect(screen, o.Position.X, o.Position.Y, o.Size.X, o.Size.Y, drawColor)
@@ -124,7 +118,7 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 		// 	drawColor = color.RGBA{0, 0, 255, 255}
 		// }
 
-		if !interrupted && cell.ContainsTags("solid") {
+		if !interrupted && cell.ContainsTags(SolidTag) {
 			drawColor = color.RGBA{255, 0, 0, 255}
 			interrupted = true
 		}
@@ -147,7 +141,6 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 	}
 
 	if world.Game.ShowHelpText {
-
 		world.Game.DrawText(screen, 16, 16,
 			"~ Line of sight test ~",
 			"WASD keys: Move player",
@@ -165,7 +158,5 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.CurrentFPS())),
 			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.CurrentTPS())),
 		)
-
 	}
-
 }

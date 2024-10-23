@@ -16,6 +16,13 @@ import (
 	"golang.org/x/image/font"
 )
 
+const (
+	PlayerTag resolv.Tag = 1 << iota
+	SolidTag
+	PlatformTag
+	RampTag
+)
+
 //go:embed excel.ttf
 var excelFont []byte
 
@@ -31,7 +38,6 @@ type Game struct {
 }
 
 func NewGame() *Game {
-
 	ebiten.SetWindowResizable(true)
 	ebiten.SetWindowTitle("resolv test")
 
@@ -63,7 +69,6 @@ func NewGame() *Game {
 	// Debug FPS rendering
 
 	go func() {
-
 		for {
 
 			fmt.Println("FPS: ", ebiten.CurrentFPS())
@@ -71,15 +76,12 @@ func NewGame() *Game {
 			time.Sleep(time.Second)
 
 		}
-
 	}()
 
 	return g
-
 }
 
 func (g *Game) Update() error {
-
 	var quit error
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
@@ -131,7 +133,6 @@ func (g *Game) Update() error {
 	g.Time += 1.0 / 60.0
 
 	return quit
-
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -153,9 +154,7 @@ func (g *Game) DrawText(screen *ebiten.Image, x, y int, textLines ...string) {
 }
 
 func (g *Game) DebugDraw(screen *ebiten.Image, space *resolv.Space) {
-
 	for y := 0; y < space.Height(); y++ {
-
 		for x := 0; x < space.Width(); x++ {
 
 			cell := space.Cell(x, y)
@@ -179,9 +178,7 @@ func (g *Game) DebugDraw(screen *ebiten.Image, space *resolv.Space) {
 
 			ebitenutil.DrawLine(screen, cx, cy+ch, cx, cy, drawColor)
 		}
-
 	}
-
 }
 
 func (g *Game) Layout(w, h int) (int, int) {

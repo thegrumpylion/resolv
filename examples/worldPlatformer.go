@@ -24,7 +24,6 @@ type Player struct {
 }
 
 func NewPlayer(space *resolv.Space) *Player {
-
 	p := &Player{
 		Object:      resolv.NewObject(32, 128, 16, 24),
 		FacingRight: true,
@@ -46,15 +45,14 @@ type WorldPlatformer struct {
 }
 
 func NewWorldPlatformer(game *Game) *WorldPlatformer {
-
-	w := &WorldPlatformer{Game: game}
+	w := &WorldPlatformer{
+		Game: game,
+	}
 	w.Init()
 	return w
-
 }
 
 func (world *WorldPlatformer) Init() {
-
 	// Initialize the world.
 
 	gw := float64(world.Game.Width)
@@ -69,15 +67,15 @@ func (world *WorldPlatformer) Init() {
 	// as it all is in this platformer example.
 
 	world.Space.Add(
-		resolv.NewObject(0, 0, 16, gh, "solid"),
-		resolv.NewObject(gw-16, 0, 16, gh, "solid"),
-		resolv.NewObject(0, 0, gw, 16, "solid"),
-		resolv.NewObject(0, gh-24, gw, 32, "solid"),
-		resolv.NewObject(160, gh-56, 160, 32, "solid"),
-		resolv.NewObject(320, 64, 32, 160, "solid"),
-		resolv.NewObject(64, 128, 16, 160, "solid"),
-		resolv.NewObject(gw-128, 64, 128, 16, "solid"),
-		resolv.NewObject(gw-128, gh-88, 128, 16, "solid"),
+		resolv.NewObjectWithTags(0, 0, 16, gh, SolidTag),
+		resolv.NewObjectWithTags(gw-16, 0, 16, gh, SolidTag),
+		resolv.NewObjectWithTags(0, 0, gw, 16, SolidTag),
+		resolv.NewObjectWithTags(0, gh-24, gw, 32, SolidTag),
+		resolv.NewObjectWithTags(160, gh-56, 160, 32, SolidTag),
+		resolv.NewObjectWithTags(320, 64, 32, 160, SolidTag),
+		resolv.NewObjectWithTags(64, 128, 16, 160, SolidTag),
+		resolv.NewObjectWithTags(gw-128, 64, 128, 16, SolidTag),
+		resolv.NewObjectWithTags(gw-128, gh-88, 128, 16, SolidTag),
 	)
 
 	// Create the Player. NewPlayer adds it to the world's Space.
@@ -85,7 +83,7 @@ func (world *WorldPlatformer) Init() {
 
 	// Create the floating platform.
 	world.FloatingPlatform = resolv.NewObject(128, gh-32, 128, 8)
-	world.FloatingPlatform.AddTags("platform")
+	world.FloatingPlatform.AddTags(PlatformTag)
 
 	// The floating platform moves using a *gween.Sequence sequence of tweens, moving it back and forth.
 	world.FloatingPlatformTween = gween.NewSequence()
@@ -97,14 +95,14 @@ func (world *WorldPlatformer) Init() {
 
 	// Non-moving floating Platforms.
 	world.Space.Add(
-		resolv.NewObject(352, 64, 48, 8, "platform"),
-		resolv.NewObject(352, 64+64, 48, 8, "platform"),
-		resolv.NewObject(352, 64+128, 48, 8, "platform"),
-		resolv.NewObject(352, 64+192, 48, 8, "platform"),
+		resolv.NewObjectWithTags(352, 64, 48, 8, PlatformTag),
+		resolv.NewObjectWithTags(352, 64+64, 48, 8, PlatformTag),
+		resolv.NewObjectWithTags(352, 64+128, 48, 8, PlatformTag),
+		resolv.NewObjectWithTags(352, 64+192, 48, 8, PlatformTag),
 	)
 
 	// A ramp, which is unique as it has a non-rectangular shape. For this, we will specify a different shape for collision testing.
-	ramp := resolv.NewObject(320, gh-56, 64, 32, "ramp")
+	ramp := resolv.NewObjectWithTags(320, gh-56, 64, 32, RampTag)
 
 	// We will construct the shape using a ConvexPolygon. It's essentially an elogated triangle, but with a "floor" afterwards,
 	// ensuring the Player is always able to stand regardless of which ramp they're standing on.
@@ -122,11 +120,9 @@ func (world *WorldPlatformer) Init() {
 	)
 	world.Space.Add(ramp)
 	ramp.SetShape(rampShape)
-
 }
 
 func (world *WorldPlatformer) Update() {
-
 	// Floating platform movement needs to be done before the player's movement update to make sure there's no space between its top and the player's bottom;
 	// otherwise, an alternative might be to have the platform detect to see if the Player's resting on it, and if so, move the player up manually.
 	y, _, seqDone := world.FloatingPlatformTween.Update(1.0 / 60.0)
@@ -182,13 +178,9 @@ func (world *WorldPlatformer) Update() {
 
 	// Check for jumping.
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsGamepadButtonJustPressed(0, 0) {
-
-		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxisValue(0, 1) > 0.1) && player.OnGround != nil && player.OnGround.HasTags("platform") {
-
+		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxisValue(0, 1) > 0.1) && player.OnGround != nil && player.OnGround.HasTags(PlatformTag) {
 			player.IgnorePlatform = player.OnGround
-
 		} else {
-
 			if player.OnGround != nil {
 				player.Speed.Y = -jumpSpd
 			} else if player.SlidingOnWall != nil {
@@ -204,9 +196,7 @@ func (world *WorldPlatformer) Update() {
 				player.SlidingOnWall = nil
 
 			}
-
 		}
-
 	}
 
 	// We handle horizontal movement separately from vertical movement. This is, conceptually, decomposing movement into two phases / axes.
@@ -221,7 +211,7 @@ func (world *WorldPlatformer) Update() {
 	// Moving horizontally is done fairly simply; we just check to see if something solid is in front of us. If so, we move into contact with it
 	// and stop horizontal movement speed. If not, then we can just move forward.
 
-	if check := player.Object.Check(player.Speed.X, 0, "solid"); check != nil {
+	if check := player.Object.CheckWithTags(player.Speed.X, 0, SolidTag); check != nil {
 
 		dx = check.ContactWithCell(check.Cells[0]).X
 		player.Speed.X = 0
@@ -261,7 +251,7 @@ func (world *WorldPlatformer) Update() {
 
 	// We check for any solid / stand-able objects. In actuality, there aren't any other Objects
 	// with other tags in this Space, so we don't -have- to specify any tags, but it's good to be specific for clarity in this example.
-	if check := player.Object.Check(0, checkDistance, "solid", "platform", "ramp"); check != nil {
+	if check := player.Object.CheckWithTags(0, checkDistance, SolidTag|PlatformTag|RampTag); check != nil {
 
 		// So! Firstly, we want to see if we jumped up into something that we can slide around horizontally to avoid bumping the Player's head.
 
@@ -272,7 +262,7 @@ func (world *WorldPlatformer) Update() {
 		// To accomplish this sliding, we simply call Collision.SlideAgainstCell() to see if we can slide.
 		// We pass the first cell, and tags that we want to avoid when sliding (i.e. we don't want to slide into cells that contain other solid objects).
 
-		slide, slideOK := check.SlideAgainstCell(check.Cells[0], "solid")
+		slide, slideOK := check.SlideAgainstCell(check.Cells[0], SolidTag)
 
 		// We further ensure that we only slide if:
 		// 1) We're jumping up into something (dy < 0),
@@ -281,11 +271,9 @@ func (world *WorldPlatformer) Update() {
 		// 4) If the proposed slide is less than 8 pixels in horizontal distance. (This is a relatively arbitrary number that just so happens to be half the
 		// width of a cell. This is to ensure the player doesn't slide too far horizontally.)
 
-		if dy < 0 && check.Cells[0].ContainsTags("solid") && slideOK && math.Abs(slide.X) <= 8 {
-
+		if dy < 0 && check.Cells[0].ContainsTags(SolidTag) && slideOK && math.Abs(slide.X) <= 8 {
 			// If we are able to slide here, we do so. No contact was made, and vertical speed (dy) is maintained upwards.
 			player.Object.Position.X += slide.X
-
 		} else {
 
 			// If sliding -fails-, that means the Player is jumping directly onto or into something, and we need to do more to see if we need to come into
@@ -297,7 +285,7 @@ func (world *WorldPlatformer) Update() {
 
 			// We get the ramp by simply filtering out Objects with the "ramp" tag out of the objects returned in our broad Check(), and grabbing the first one
 			// if there's any at all.
-			if ramps := check.ObjectsByTags("ramp"); len(ramps) > 0 {
+			if ramps := check.ObjectsByTags(RampTag); len(ramps) > 0 {
 
 				// For simplicity, this code assumes we can only stand on one ramp at a time as there is only one ramp in this example.
 				// This is exemplified by the ramp := ramps[0] line.
@@ -341,7 +329,7 @@ func (world *WorldPlatformer) Update() {
 			// with the top of the platform object. An alternative would be to use Collision.ContactWithCell(), but that would be only if the
 			// platform didn't move and were aligned with the Space's grid.
 
-			if platforms := check.ObjectsByTags("platform"); len(platforms) > 0 {
+			if platforms := check.ObjectsByTags(PlatformTag); len(platforms) > 0 {
 
 				platform := platforms[0]
 
@@ -361,7 +349,7 @@ func (world *WorldPlatformer) Update() {
 			// We use ContactWithObject() here because otherwise, we might come into contact with the moving platform's cells (which, naturally,
 			// would be selected by a Collision.ContactWithCell() call because the cell is closest to the Player).
 
-			if solids := check.ObjectsByTags("solid"); len(solids) > 0 && (player.OnGround == nil || player.OnGround.Position.Y >= solids[0].Position.Y) {
+			if solids := check.ObjectsByTags(SolidTag); len(solids) > 0 && (player.OnGround == nil || player.OnGround.Position.Y >= solids[0].Position.Y) {
 				dy = check.ContactWithObject(solids[0]).Y
 				player.Speed.Y = 0
 
@@ -390,24 +378,21 @@ func (world *WorldPlatformer) Update() {
 	}
 
 	// If the wall next to the Player runs out, stop wall sliding.
-	if c := player.Object.Check(wallNext, 0, "solid"); player.SlidingOnWall != nil && c == nil {
+	if c := player.Object.CheckWithTags(wallNext, 0, SolidTag); player.SlidingOnWall != nil && c == nil {
 		player.SlidingOnWall = nil
 	}
 
 	player.Object.Update() // Update the player's position in the space.
 
 	// And that's it!
-
 }
 
 func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
-
 	for _, o := range world.Space.Objects() {
-
-		if o.HasTags("platform") && o != world.FloatingPlatform {
+		if o.HasTags(PlatformTag) && o != world.FloatingPlatform {
 			drawColor := color.RGBA{180, 100, 0, 255}
 			vector.DrawFilledRect(screen, float32(o.Position.X), float32(o.Position.Y), float32(o.Size.X), float32(o.Size.Y), drawColor, false)
-		} else if o.HasTags("ramp") {
+		} else if o.HasTags(RampTag) {
 			drawColor := color.RGBA{255, 50, 100, 255}
 			tri := o.Shape.(*resolv.ConvexPolygon)
 			world.DrawPolygon(screen, tri, drawColor)
@@ -415,7 +400,6 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 			drawColor := color.RGBA{60, 60, 60, 255}
 			vector.DrawFilledRect(screen, float32(o.Position.X), float32(o.Position.Y), float32(o.Size.X), float32(o.Size.Y), drawColor, false)
 		}
-
 	}
 
 	// We draw the floating platform separately because Space.Objects() returns Objects in order of which cells they are in, which means
@@ -437,7 +421,6 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 	}
 
 	if world.Game.ShowHelpText {
-
 		world.Game.DrawText(screen, 16, 16,
 			"~ Platformer Demo ~",
 			"Move Player: Left, Right Arrow",
@@ -455,15 +438,11 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.ActualFPS())),
 			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.ActualTPS())),
 		)
-
 	}
-
 }
 
 func (world *WorldPlatformer) DrawPolygon(screen *ebiten.Image, polygon *resolv.ConvexPolygon, color color.Color) {
-
 	for _, line := range polygon.Lines() {
 		vector.StrokeLine(screen, float32(line.Start.X), float32(line.Start.Y), float32(line.End.X), float32(line.End.Y), 1, color, false)
 	}
-
 }

@@ -14,20 +14,20 @@ type Object struct {
 	TouchingCells []*Cell          // An array of Cells the Object is touching
 	Data          interface{}      // A pointer to a user-definable object
 	ignoreList    map[*Object]bool // Set of Objects to ignore when checking for collisions
-	tags          []string         // A list of tags the Object has
+	tags          Tag              // A list of tags the Object has
 }
 
 // NewObject returns a new Object of the specified position and size.
-func NewObject(x, y, w, h float64, tags ...string) *Object {
+func NewObject(x, y, w, h float64) *Object {
+	return NewObjectWithTags(x, y, w, h, 0)
+}
+
+func NewObjectWithTags(x, y, w, h float64, tags Tag) *Object {
 	o := &Object{
 		Position:   NewVector(x, y),
 		Size:       NewVector(w, h),
-		tags:       []string{},
 		ignoreList: map[*Object]bool{},
-	}
-
-	if len(tags) > 0 {
-		o.AddTags(tags...)
+		tags:       tags,
 	}
 
 	return o
@@ -35,7 +35,7 @@ func NewObject(x, y, w, h float64, tags ...string) *Object {
 
 // Clone clones the Object with its properties into another Object. It also clones the Object's Shape (if it has one).
 func (obj *Object) Clone() *Object {
-	newObj := NewObject(obj.Position.X, obj.Position.Y, obj.Size.X, obj.Size.Y, obj.Tags()...)
+	newObj := NewObjectWithTags(obj.Position.X, obj.Position.Y, obj.Size.X, obj.Size.Y, obj.Tags())
 	newObj.Data = obj.Data
 	if obj.Shape != nil {
 		newObj.SetShape(obj.Shape.Clone())
@@ -49,7 +49,6 @@ func (obj *Object) Clone() *Object {
 // Update updates the object's association to the Cells in the Space. This should be called whenever an Object is moved.
 // This is automatically called once when creating the Object, so you don't have to call it for static objects.
 func (obj *Object) Update() {
-
 	if obj.Space != nil {
 
 		// Object.Space.Remove() sets the removed object's Space to nil, indicating it's been removed. Because we're updating
@@ -65,7 +64,6 @@ func (obj *Object) Update() {
 		cx, cy, ex, ey := obj.BoundsToSpace(0, 0)
 
 		for y := cy; y <= ey; y++ {
-
 			for x := cx; x <= ex; x++ {
 
 				c := obj.Space.Cell(x, y)
@@ -76,7 +74,6 @@ func (obj *Object) Update() {
 				}
 
 			}
-
 		}
 
 	}
@@ -84,54 +81,26 @@ func (obj *Object) Update() {
 	if obj.Shape != nil {
 		obj.Shape.SetPosition(obj.Position.X, obj.Position.Y)
 	}
-
 }
 
 // AddTags adds tags to the Object.
-func (obj *Object) AddTags(tags ...string) {
-	obj.tags = append(obj.tags, tags...)
+func (obj *Object) AddTags(tags Tag) {
+	obj.tags |= tags
 }
 
 // RemoveTags removes tags from the Object.
-func (obj *Object) RemoveTags(tags ...string) {
-
-	for _, tag := range tags {
-
-		for i, t := range obj.tags {
-
-			if t == tag {
-				obj.tags = append(obj.tags[:i], obj.tags[i+1:]...)
-				break
-			}
-
-		}
-
-	}
-
+func (obj *Object) RemoveTags(tags Tag) {
+	obj.tags &^= tags
 }
 
 // HasTags indicates if an Object has any of the tags indicated.
-func (obj *Object) HasTags(tags ...string) bool {
-
-	for _, tag := range tags {
-
-		for _, t := range obj.tags {
-
-			if t == tag {
-				return true
-			}
-
-		}
-
-	}
-
-	return false
-
+func (obj *Object) HasTags(tags Tag) bool {
+	return obj.tags&tags != 0
 }
 
 // Tags returns the tags an Object has.
-func (obj *Object) Tags() []string {
-	return append([]string{}, obj.tags...)
+func (obj *Object) Tags() Tag {
+	return obj.tags
 }
 
 // SetShape sets the Shape on the Object, in case you need to use precise per-Shape intersection detection. SetShape calls Object.Update() as well, so that it's able to
@@ -162,9 +131,9 @@ func (obj *Object) SharesCells(other *Object) bool {
 }
 
 // SharesCellsTags returns if the Cells the Object occupies have an object with the specified tags.
-func (obj *Object) SharesCellsTags(tags ...string) bool {
+func (obj *Object) SharesCellsTags(tags Tag) bool {
 	for _, cell := range obj.TouchingCells {
-		if cell.ContainsTags(tags...) {
+		if cell.ContainsTags(tags) {
 			return true
 		}
 	}
@@ -223,8 +192,11 @@ func (obj *Object) SetBounds(topLeft, bottomRight Vector) {
 // Check checks the space around the object using the designated delta movement (dx and dy). This is done by querying the containing Space's Cells
 // so that it can see if moving it would coincide with a cell that houses another Object (filtered using the given selection of tag strings). If so,
 // Check returns a Collision. If no objects are found or the Object does not exist within a Space, this function returns nil.
-func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
+func (obj *Object) Check(dx, dy float64) *Collision {
+	return obj.CheckWithTags(dx, dy, 0)
+}
 
+func (obj *Object) CheckWithTags(dx, dy float64, tags Tag) *Collision {
 	if obj.Space == nil {
 		return nil
 	}
@@ -253,11 +225,8 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 	cellsAdded := map[*Cell]bool{}
 
 	for y := cy; y <= ey; y++ {
-
 		for x := cx; x <= ex; x++ {
-
 			if c := obj.Space.Cell(x, y); c != nil {
-
 				for _, o := range c.Objects {
 
 					// We only want cells that have objects other than the checking object, or that aren't on the ignore list.
@@ -265,7 +234,7 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 						continue
 					}
 
-					if _, added := objectsAdded[o]; (len(tags) == 0 || o.HasTags(tags...)) && !added {
+					if _, added := objectsAdded[o]; (tags == 0 || o.HasTags(tags)) && !added {
 
 						cc.Objects = append(cc.Objects, o)
 						objectsAdded[o] = true
@@ -278,11 +247,8 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 					}
 
 				}
-
 			}
-
 		}
-
 	}
 
 	if len(cc.Objects) == 0 {
@@ -295,23 +261,18 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 	oc := cc.checkingObject.Center()
 
 	sort.Slice(cc.Objects, func(i, j int) bool {
-
 		return cc.Objects[i].Center().Sub(oc).Magnitude() < cc.Objects[j].Center().Sub(oc).Magnitude()
-
 	})
 
 	cw := cc.checkingObject.Space.CellWidth
 	ch := cc.checkingObject.Space.CellHeight
 
 	sort.Slice(cc.Cells, func(i, j int) bool {
-
 		return Vector{float64(cc.Cells[i].X*cw + (cw / 2)), float64(cc.Cells[i].Y*ch + (ch / 2))}.Sub(oc).Magnitude() <
 			Vector{float64(cc.Cells[j].X*cw + (cw / 2)), float64(cc.Cells[j].Y*ch + (ch / 2))}.Sub(oc).Magnitude()
-
 	})
 
 	return cc
-
 }
 
 // Overlaps returns if an Object overlaps another Object.
